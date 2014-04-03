@@ -74,3 +74,23 @@
       :height (.getHeight final-image)
       :color? (if color? true false)   ; forcing an explicit true/false because i am nitpicky like that
       :image  (ImageToAscii/convert final-image color?)})))
+
+(defn- get-ascii-gif-frames [^ImageInputStream image-stream scale-to-width color?]
+  (->> (AnimatedGif/read image-stream)
+       (mapv
+         (fn [^ImageFrame frame]
+           (-> (.image frame)
+               (convert-image scale-to-width color?)
+               (assoc :delay (.delay frame)))))))
+
+(defn convert-animated-gif-frames
+  ([^ImageInputStream image-stream color?]
+   (convert-animated-gif-frames image-stream nil color?))
+  ([^ImageInputStream image-stream scale-to-width color?]
+   (let [frames (get-ascii-gif-frames image-stream scale-to-width color?)
+         width  (-> frames first :width)
+         height (-> frames first :height)]
+     {:width  width
+      :height height
+      :color? (if color? true false)   ; forcing an explicit true/false because i am nitpicky like that
+      :frames (mapv #(select-keys % [:image :delay]) frames)})))
