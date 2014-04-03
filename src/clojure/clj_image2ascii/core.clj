@@ -1,10 +1,11 @@
 (ns clj-image2ascii.core
   (:import (javax.imageio ImageIO)
+           (javax.imageio.stream ImageInputStream)
+           (java.awt RenderingHints Graphics2D)
            (java.awt.image BufferedImage)
            (java.net URL)
-           (java.io File)
-           (java.awt RenderingHints Graphics2D)
-           (clj_image2ascii.java ImageToAscii)))
+           (java.io File InputStream)
+           (clj_image2ascii.java ImageToAscii AnimatedGif ImageFrame)))
 
 (defn get-image-by-url
   "returns a BufferedImage loaded from the URL specified, or null if an error occurs"
@@ -18,6 +19,19 @@
   (^BufferedImage [^File file]
    (try
      (ImageIO/read file)
+     (catch Exception ex))))
+
+(defn get-image-stream-by-url
+  (^ImageInputStream [^URL url]
+   (try
+     (let [^InputStream stream (.openStream url)]
+       (ImageIO/createImageInputStream stream))
+     (catch Exception ex))))
+
+(defn get-image-stream-by-file
+  (^ImageInputStream [^File file]
+   (try
+     (ImageIO/createImageInputStream file)
      (catch Exception ex))))
 
 (defn scale-image
