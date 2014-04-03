@@ -2,6 +2,8 @@
 
 Tools for turning images into ASCII equivalents.
 
+* Still under very early development. *
+
 ## Usage
 
 FIXME
