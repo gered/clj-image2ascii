@@ -8,20 +8,23 @@
            (clj_image2ascii.java ImageToAscii AnimatedGif ImageFrame)))
 
 (defn get-image-by-url
-  "returns a BufferedImage loaded from the URL specified, or null if an error occurs"
+  "returns a BufferedImage loaded from a URL pointing to an image, or null if an
+   exception occurs"
   (^BufferedImage [^URL url]
    (try
      (ImageIO/read url)
      (catch Exception ex))))
 
 (defn get-image-by-file
-  "returns a BufferedImage loaded from the file specified, or null if an error occurs"
+  "returns a BufferedImage loaded from an image file, or null if an exception occurs"
   (^BufferedImage [^File file]
    (try
      (ImageIO/read file)
      (catch Exception ex))))
 
 (defn get-image-stream-by-url
+  "returns an ImageInputStream loaded from a URL pointing to an image, or null if an
+   exception occurs"
   (^ImageInputStream [^URL url]
    (try
      (let [^InputStream stream (.openStream url)]
@@ -29,6 +32,8 @@
      (catch Exception ex))))
 
 (defn get-image-stream-by-file
+  "returns an ImageInputStream loaded from an image file, or null if an exception
+   occurs"
   (^ImageInputStream [^File file]
    (try
      (ImageIO/createImageInputStream file)
@@ -94,6 +99,27 @@
                (assoc :delay (fix-gif-frame-delay (.delay frame))))))))
 
 (defn convert-animated-gif-frames
+  "converts an ImageInputStream created from an animated GIF to a series of ASCII
+   frames representing each frame of animation in the source GIF. scale-to-width is
+   a new width in pixels to scale the image to, if specified. the scaling will be
+   done such that the entire image is scaled proportionally and is done before the
+   ASCII conversion is performed. the return value is a map containing:
+
+   :width  - the width in pixels of the image (and all frames) that was converted
+   :height - the height in pixels of the image (and all frames) that was converted
+   :color? - indicates if the ASCII includes color information or not
+   :frames - a vector of maps, one per frame of animation in the order they should
+             be played for proper animation
+
+   each frame is a map containing:
+
+   :delay  - the time in milliseconds that this frame should be displayed before
+             the next frame is to be displayed
+   :image  - a string containing the frame's ASCII representation. if color? is true,
+             then this string will include HTML <span> tags wrapping each individual
+             ASCII character with <br> tags between each line of 'pixels'. if false,
+             then only the raw characters are included, with newline characters
+             between each line of 'pixels'."
   ([^ImageInputStream image-stream color?]
    (convert-animated-gif-frames image-stream nil color?))
   ([^ImageInputStream image-stream scale-to-width color?]
