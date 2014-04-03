@@ -2,11 +2,19 @@ package clj_image2ascii.java;
 
 import java.awt.image.BufferedImage;
 
-// This method of converting an image to ascii representation is based on the method used in
-// Claskii (https://github.com/LauJensen/Claskii). Some improvements have been made, such as
-// a better way of calculating pixel brightness and little tweaks to how the right ASCII
-// character is selected, as well as obviously a conversion to Java purely for performance.
-
+/**
+ * Converts an image to a string containing an ASCII representation if it, using ASCII
+ * characters as the pixels. If converting with color, each pixel will be wrapped in
+ * HTML to apply color.
+ *
+ * This method of converting an image to ASCII is based on the method used in Claskii
+ * (https://github.com/LauJensen/Claskii). Some improvements have been made, such as
+ * a better way of calculating pixel brightness, little tweaks to how the right ASCII
+ * character is selected, far less memory wasted during conversion, and obviously
+ * a total conversion to Java purely for performance benefits.
+ *
+ * @author gered
+ */
 public class ImageToAscii {
 	static final char[] asciiChars = {'#', 'A', '@', '%', '$', '+', '=', '*', ':', ',', '.', ' '};
 	static final int numAsciiChars = asciiChars.length - 1;
