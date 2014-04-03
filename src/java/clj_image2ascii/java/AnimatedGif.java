@@ -12,6 +12,7 @@ import javax.imageio.stream.ImageInputStream;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
+import java.util.Iterator;
 import java.util.LinkedList;
 
 /**
@@ -97,13 +98,8 @@ public class AnimatedGif {
 			IIOMetadataNode root = (IIOMetadataNode)frameMetadata.getAsTree(frameMetadata.getNativeMetadataFormatName());
 			IIOMetadataNode gce = (IIOMetadataNode)root.getElementsByTagName("GraphicControlExtension").item(0);
 
-			// delay specified as 1/100 of a second (*10 to get in milliseconds).
-			// TODO: zero delay frames are meant as intermediate frames to "prepare" the canvas for the following
-			//       frames (i guess as a way to clear/fill the background for a bunch of upcoming frames which
-			//       don't fill the entire canvas?). we probably *do* need to add these (temporarily) to the frames
-			//       array so that we guarantee proper disposal method handling, but the final array we return from
-			//       this method probably should not include them
-			//       More info: http://www.imagemagick.org/Usage/anim_basics/#zero
+			// delay specified as 1/100 of a second (*10 to get in milliseconds). we handle the special zero case
+			// after the loop is done, for now treat them as any other frame
 			int delay = Integer.valueOf(gce.getAttribute("delayTime"));
 
 			String disposal = gce.getAttribute("disposalMethod");
@@ -163,6 +159,16 @@ public class AnimatedGif {
 		}
 
 		reader.dispose();
+
+		// remove zero-delay frames, which are just intermediate frames to "prep" the canvas for subsequent frames
+		// (i guess as a way to clear/fill the background for a bunch of upcoming frames which don't fill the entire
+		// canvas? anyway, we don't need them anymore as they aren't meant to be displayed)
+		// More info: http://www.imagemagick.org/Usage/anim_basics/#zero
+		Iterator<ImageFrame> itor = frames.iterator();
+		while (itor.hasNext()) {
+			if (itor.next().delay == 0)
+				itor.remove();
+		}
 
 		return frames;
 	}
