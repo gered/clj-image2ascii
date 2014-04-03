@@ -75,13 +75,23 @@
       :color? (if color? true false)   ; forcing an explicit true/false because i am nitpicky like that
       :image  (ImageToAscii/convert final-image color?)})))
 
+(defn- fix-gif-frame-delay [delay]
+  ; based on the findings here: http://nullsleep.tumblr.com/post/16524517190/animated-gif-minimum-frame-delay-browser-compatibility
+  ; basically, we should not allow any delay less then 0.02s (20ms) because none of the major browsers support it
+  ; and this library is primarily intended for web use, where we want to mimic GIF-like playback (even though we
+  ; won't be held by the same limitations since we will be using javascript for our animation)
+  (let [ms (* delay 10)]
+    (if (< ms 20)
+      20
+      ms)))
+
 (defn- get-ascii-gif-frames [^ImageInputStream image-stream scale-to-width color?]
   (->> (AnimatedGif/read image-stream)
        (mapv
          (fn [^ImageFrame frame]
            (-> (.image frame)
                (convert-image scale-to-width color?)
-               (assoc :delay (.delay frame)))))))
+               (assoc :delay (fix-gif-frame-delay (.delay frame))))))))
 
 (defn convert-animated-gif-frames
   ([^ImageInputStream image-stream color?]
