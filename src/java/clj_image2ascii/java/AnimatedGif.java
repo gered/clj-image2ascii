@@ -26,6 +26,8 @@ import java.util.ArrayList;
 public class AnimatedGif {
 	public static ImageFrame[] read(ImageInputStream stream) throws IOException {
 		ImageReader reader = ImageIO.getImageReadersByFormatName("gif").next();
+		reader.setInput(stream, false);
+
 		ArrayList<ImageFrame> frames = new ArrayList<ImageFrame>(2);
 
 		int width = -1;
