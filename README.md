@@ -51,7 +51,7 @@ characters and newlines characters.
 
 Note that converting with color will *significantly* increase the size of the returned ASCII string. Care should be
 taken when converting large images without scaling but with color. For example, a 300x300 image converted with color
-at it's original size will result in a ~3.8MB string.
+at it's original size will result in a string that is over 3MB in size!
 
 ### Animated GIFs
 
