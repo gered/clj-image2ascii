@@ -1,4 +1,4 @@
-(defproject clj-image2ascii "0.1.0-SNAPSHOT"
+(defproject clj-image2ascii "0.1"
   :description "Tools for turning images into ASCII equivalents."
   :url "https://github.com/gered/clj-image2ascii"
   :license {:name "MIT License"
