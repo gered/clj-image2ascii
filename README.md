@@ -81,6 +81,32 @@ will contain the converted ASCII "image" string.
 With animated GIFs especially you should be careful about converting with color information, as you can end up with
 *extremely* big return values if the GIF is large.
 
+#### Streaming Frames
+
+The `convert-animated-gif-frames` function can use excessive amounts of memory due to the fact that it holds and
+builds up a complete list of converted ASCII frames until the conversion process is finished for all frames and then
+that full list is returned. This behaviour can be useful, but depending on what you need to do with these frames
+it can be wasteful. Especially so for larger GIFs that you want to convert with color information.
+
+The `stream-animated-gif-frames!` function can be used to "stream" frames from the animated GIF as they are converted.
+Once a frame has been converted, it will be passed to a function you provide to `stream-animated-gif-frames!`, then you
+can do whatever you need to do with it. `stream-animated-gif-frames!` will not keep previously converted frames
+around and it returns nothing when conversion is complete for all frames. The arguments to `stream-animated-gif-frames!`
+are the same as to `convert-animated-gif-frames`, except that the last argument is a function that accepts a map
+which will contain information about the converted frame.
+
+As an example, maybe you just want to write these frames out to a file:
+
+```clojure
+(stream-animated-gif-frames!
+  (get-image-stream-by-file (File. "/path/to/animated.gif"))
+  true       ; convert with color
+  (fn [{:keys [width height color? image delay]}]
+    (spit file image)))
+```
+
+Nice and easy.
+
 ## License
 
 Distributed under the the MIT License. See LICENSE for more details.
