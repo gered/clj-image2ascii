@@ -111,7 +111,13 @@
              then this string will include HTML <span> tags wrapping each individual
              ASCII character with <br> tags between each line of 'pixels'. if false,
              then only the raw characters are included, with newline characters
-             between each line of 'pixels'."
+             between each line of 'pixels'.
+
+   this function uses more memory then stream-animated-gif-frames! since it keeps
+   all of the converted ASCII frames in memory before returning the entire set when
+   the conversion process has been completed. unless you really need this kind of
+   behaviour, you should instead consider using stream-animated-gif-frames!
+   instead."
   ([^ImageInputStream image-stream color?]
    (convert-animated-gif-frames image-stream nil color?))
   ([^ImageInputStream image-stream scale-to-width color?]
@@ -135,3 +141,44 @@
      (merge
        @image-props
        {:frames @converted-frames}))))
+
+(defn stream-animated-gif-frames!
+  "converts an ImageInputStream created from an animated GIF to a series of ASCII
+   frames representing each frame of animation in the source GIF. scale-to-width is
+   a new width in pixels to scale the image to, if specified. the scaling will be
+   done such that the entire image is scaled proportionally and is done before the
+   ASCII conversion is performed.
+
+   this function will 'stream' the results as each frame is converted, passing a
+   map to the function f. the map will contain:
+
+   :width  - the width in pixels of the frame that was converted
+   :height - the height in pixels of the frame that was converted
+   :color? - indicates if the ASCII includes color information or not
+   :delay  - the time in milliseconds that this frame should be displayed before
+             the next frame is to be displayed
+   :image  - a string containing the frame's ASCII representation. if color? is true,
+             then this string will include HTML <span> tags wrapping each individual
+             ASCII character with <br> tags between each line of 'pixels'. if false,
+             then only the raw characters are included, with newline characters
+             between each line of 'pixels'.
+
+   usually f will perform some operation with side-effects to make use of the
+   passed ASCII image frame (e.g. writing it out to an output stream).
+
+   this function does not return anything. the image frames are only made available
+   to the f function.
+
+   you should consider using this function when you want to limit memory usage
+   when converting large animated GIFs. convert-animated-gif-frames will keep
+   them in memory and return the entire list which can be wasteful."
+  ([^ImageInputStream image-stream color? f]
+   (stream-animated-gif-frames! image-stream nil color? f))
+  ([^ImageInputStream image-stream scale-to-width color? f]
+   (AnimatedGif/read
+     image-stream
+     (fn [^BufferedImage frame-image delay]
+       (-> frame-image
+           (convert-image scale-to-width color?)
+           (assoc :delay delay)
+           (f))))))
