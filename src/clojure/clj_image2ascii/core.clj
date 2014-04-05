@@ -137,7 +137,7 @@
 
            ; and append the converted frame's ascii to the list
            (swap! converted-frames conj {:image (:image converted)
-                                         :delay delay}))))
+                                         :delay (fix-gif-frame-delay delay)}))))
      (merge
        @image-props
        {:frames @converted-frames}))))
@@ -180,5 +180,5 @@
      (fn [^BufferedImage frame-image delay]
        (-> frame-image
            (convert-image scale-to-width color?)
-           (assoc :delay delay)
+           (assoc :delay (fix-gif-frame-delay delay))
            (f))))))
