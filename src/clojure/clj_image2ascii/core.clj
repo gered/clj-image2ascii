@@ -5,7 +5,7 @@
            (java.awt.image BufferedImage)
            (java.net URL)
            (java.io File InputStream)
-           (clj_image2ascii.java ImageToAscii AnimatedGif ImageFrame)))
+           (clj_image2ascii.java ImageToAscii AnimatedGif)))
 
 (defn get-image-by-url
   "returns a BufferedImage loaded from a URL pointing to an image, or null if an
