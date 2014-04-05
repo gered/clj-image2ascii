@@ -1,5 +1,6 @@
 package clj_image2ascii.java;
 
+import clojure.lang.IFn;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
@@ -12,8 +13,6 @@ import javax.imageio.stream.ImageInputStream;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
-import java.util.Iterator;
-import java.util.LinkedList;
 
 /**
  * Helper for extracting each frame of animation from a GIF as a separate BufferedImage.
@@ -25,12 +24,14 @@ import java.util.LinkedList;
  * @author gered (_extremely_ minor tweaks)
  */
 public class AnimatedGif {
-	public static LinkedList<ImageFrame> read(ImageInputStream stream) throws IOException {
+	public static void read(ImageInputStream stream, IFn fn) throws IOException {
 		ImageReader reader = ImageIO.getImageReadersByFormatName("gif").next();
 		reader.setInput(stream, false);
 
-		// note: using a LinkedList so we can do some quick filtering out of zero delay frames in the future
-		LinkedList<ImageFrame> frames = new LinkedList<ImageFrame>();
+		// will hold a copy of the last frame's "full" image which we can use to restore from a "restoreToPrevious"
+		// disposal method if found in a subsequent frame. this will constantly be changed as we read through the
+		// gif's frames and come across non-restoreToPrevious disposal method frames.
+		BufferedImage lastFullFrame = null;
 
 		// will hold the size of the "canvas" which we will be drawing each frame into to generate complete
 		// BufferedImage instances for each frames ImageFrame instance. this is the full width/height of the entire
@@ -60,10 +61,9 @@ public class AnimatedGif {
 		}
 
 		// canvas image. this is going to be our "scratch space" which we will draw each frame into to generate a full
-		// BufferedImage object for and set in an ImageFrame instance for each frame of animation. this is necessary
-		// because some types of animation will specify some frames as smaller images which need to be rendered at
-		// certain positions on top of the previous frame, so having a canvas to draw on makes generating the full
-		// image for each frame much simpler
+		// BufferedImage object for. this is necessary because some types of animation will specify some frames as
+		// smaller images which need to be rendered at certain positions on top of the previous frame, so having a
+		// canvas to draw on makes generating the full image for each frame much simpler
 		BufferedImage canvas = null;
 		Graphics2D canvasGraphics = null;
 
@@ -121,10 +121,14 @@ public class AnimatedGif {
 			// draw this frame into our canvas
 			canvasGraphics.drawImage(image, x, y, null);
 
-			// create an ImageFrame instance for this frame, using the current contents of our canvas image (which
-			// should at this point have the full image contents to accurately draw this frame of animation)
-			BufferedImage copy = new BufferedImage(canvas.getColorModel(), canvas.copyData(null), canvas.isAlphaPremultiplied(), null);
-			frames.add(new ImageFrame(copy, delay, disposal));
+			// invoke the passed Clojure function given passing the delay and the current canvas image which will
+			// contain a copy of this frame's "full" image. skip over this for zero-delay frames, which are just
+			// intermediate frames to "prep" the canvas for subsequent frames (i guess as a way to clear/fill the
+			// background for a bunch of upcoming frames which don't fill the entire canvas? anyway, we don't need them
+			// anymore as they aren't meant to be displayed).
+			// More info: http://www.imagemagick.org/Usage/anim_basics/#zero
+			if (delay > 0)
+				fn.invoke(canvas, delay);
 
 			// handle certain disposal methods
 			if (disposal.equals("restoreToPrevious")) {
@@ -132,16 +136,9 @@ public class AnimatedGif {
 				//  overlaid. If the previous frame image also used a ['restoreToPrevious'] disposal method, then the
 				//  result will be that same as what it was before that frame.. etc.. etc.. etc..."
 				// -- http://www.imagemagick.org/Usage/anim_basics/#dispose
-				BufferedImage from = null;
-				for (int i = frameIndex - 1; i >= 0; i--) {
-					if (!frames.get(i).disposal.equals("restoreToPrevious") || frameIndex == 0) {
-						from = frames.get(i).image;
-						break;
-					}
-				}
 
-				// reset the canvas to the previous frame which we found above
-				canvas = new BufferedImage(from.getColorModel(), from.copyData(null), from.isAlphaPremultiplied(), null);
+				// reset the canvas
+				canvas = new BufferedImage(lastFullFrame.getColorModel(), lastFullFrame.copyData(null), lastFullFrame.isAlphaPremultiplied(), null);
 				canvasGraphics = canvas.createGraphics();
 				canvasGraphics.setBackground(new Color(0, 0, 0, 0));
 
@@ -156,20 +153,13 @@ public class AnimatedGif {
 				// ready for the next frame
 				canvasGraphics.clearRect(x, y, image.getWidth(), image.getHeight());
 			}
+
+			// keep a copy of the current canvas image if this frame can be used to recover from a "restoreToPrevious"
+			// disposal method in a future frame
+			if (!disposal.equals("restoreToPrevious") || lastFullFrame == null)
+				lastFullFrame = new BufferedImage(canvas.getColorModel(), canvas.copyData(null), canvas.isAlphaPremultiplied(), null);;
 		}
 
 		reader.dispose();
-
-		// remove zero-delay frames, which are just intermediate frames to "prep" the canvas for subsequent frames
-		// (i guess as a way to clear/fill the background for a bunch of upcoming frames which don't fill the entire
-		// canvas? anyway, we don't need them anymore as they aren't meant to be displayed)
-		// More info: http://www.imagemagick.org/Usage/anim_basics/#zero
-		Iterator<ImageFrame> itor = frames.iterator();
-		while (itor.hasNext()) {
-			if (itor.next().delay == 0)
-				itor.remove();
-		}
-
-		return frames;
 	}
 }

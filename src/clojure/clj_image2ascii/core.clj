@@ -90,14 +90,6 @@
       20
       ms)))
 
-(defn- get-ascii-gif-frames [^ImageInputStream image-stream scale-to-width color?]
-  (->> (AnimatedGif/read image-stream)
-       (mapv
-         (fn [^ImageFrame frame]
-           (-> (.image frame)
-               (convert-image scale-to-width color?)
-               (assoc :delay (fix-gif-frame-delay (.delay frame))))))))
-
 (defn convert-animated-gif-frames
   "converts an ImageInputStream created from an animated GIF to a series of ASCII
    frames representing each frame of animation in the source GIF. scale-to-width is
@@ -123,10 +115,23 @@
   ([^ImageInputStream image-stream color?]
    (convert-animated-gif-frames image-stream nil color?))
   ([^ImageInputStream image-stream scale-to-width color?]
-   (let [frames (get-ascii-gif-frames image-stream scale-to-width color?)
-         width  (-> frames first :width)
-         height (-> frames first :height)]
-     {:width  width
-      :height height
-      :color? (if color? true false)   ; forcing an explicit true/false because i am nitpicky like that
-      :frames (mapv #(select-keys % [:image :delay]) frames)})))
+   (let [converted-frames (atom '())
+         image-props      (atom nil)]
+     (AnimatedGif/read
+       image-stream
+       (fn [^BufferedImage frame-image delay]
+         (let [converted (convert-image frame-image scale-to-width color?)]
+           ; on the first image, we should use it's properties to populate the general image properties map
+           ; (AnimatedGif/read will see to it that all gif frames will have the same width/height)
+           (if (nil? @image-props)
+             (reset! image-props
+                     {:color? (if color? true false)  ; forcing an explicit true/false because i am nitpicky like that
+                      :width  (:width converted)
+                      :height (:height converted)}))
+
+           ; and append the converted frame's ascii to the list
+           (swap! converted-frames conj {:image (:image converted)
+                                         :delay delay}))))
+     (merge
+       @image-props
+       {:frames @converted-frames}))))
